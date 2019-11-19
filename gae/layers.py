@@ -118,3 +118,22 @@ class InnerProductDecoder(Layer):
         x = tf.reshape(x, [-1])
         outputs = self.act(x)
         return outputs
+
+
+class FeaturesDecoder(Layer):
+    """Decoder model layer for feature reconstruction."""
+    def __init__(self, input_dim, output_dim, dropout=0., act=tf.nn.sigmoid, **kwargs):
+        super(FeaturesDecoder, self).__init__(**kwargs)
+        with tf.variable_scope(self.name + '_vars'):
+            self.vars['weights'] = weight_variable_glorot(input_dim, output_dim, name="weights")
+
+        self.dropout = dropout
+        self.act = act
+
+    def _call(self, inputs):
+        x = tf.nn.dropout(inputs, 1-self.dropout)
+        x = tf.matmul(x, self.vars['weights'])
+        outputs = self.act(x)
+
+        return outputs
+

@@ -1,4 +1,4 @@
-from gae.layers import GraphConvolution, GraphConvolutionSparse, InnerProductDecoder
+from gae.layers import GraphConvolution, GraphConvolutionSparse, InnerProductDecoder, FeaturesDecoder
 import tensorflow as tf
 
 flags = tf.app.flags
@@ -114,3 +114,9 @@ class GCNModelVAE(Model):
         self.reconstructions = InnerProductDecoder(input_dim=FLAGS.hidden2,
                                       act=lambda x: x,
                                       logging=self.logging)(self.z)
+
+
+        self.feature_reconstructions = FeaturesDecoder(input_dim=FLAGS.hidden2, 
+                                        output_dim=self.input_dim,
+                                        act=tf.nn.relu,
+                                        logging=self.logging)(self.z)

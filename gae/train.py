@@ -148,6 +148,24 @@ def get_roc_score(edges_pos, edges_neg, emb=None):
     return roc_score, ap_score
 
 
+def get_features_recons_score():
+    feed_dict.update({placeholders['dropout']: 0})
+    features_rec = sess.run(model.feature_reconstructions, feed_dict=feed_dict)
+    
+    coords, values, shape = features[0], features[1], features[2]
+    labels = sp.coo_matrix((values, (coords[:, 0], coords[:, 1])), shape=(shape)).toarray().flatten()
+    logits = features_rec.flatten()
+
+    # print ("1 class = {0}, 0 class = {1}".format(len(coords), len(logits) - len(coords)))
+    # print ("labels: {0:.3f} +- {1:.3f} ({2:.2f}-{3:.2f})".format(np.mean(labels), np.std(labels), np.min(labels), np.max(labels)))
+    # print ("logits: {0:.3f} +- {1:.3f} ({2:.2f}-{3:.2f})".format(np.mean(logits), np.std(logits), np.min(logits), np.max(logits)))
+
+    roc_score = roc_auc_score(labels, logits)
+    ap_score = average_precision_score(labels, logits)
+
+    return roc_score, ap_score
+
+
 cost_val = []
 acc_val = []
 val_roc_score = []
@@ -171,10 +189,14 @@ for epoch in range(FLAGS.epochs):
 
     roc_curr, ap_curr = get_roc_score(val_edges, val_edges_false)
     val_roc_score.append(roc_curr)
+    roc_feat, ap_feat = get_features_recons_score()
 
     print("Epoch:", '%04d' % (epoch + 1), "train_loss=", "{:.5f}".format(avg_cost),
-          "train_acc=", "{:.5f}".format(avg_accuracy), "val_roc=", "{:.5f}".format(val_roc_score[-1]),
+          "train_acc=", "{:.5f}".format(avg_accuracy), 
+          "val_roc=", "{:.5f}".format(val_roc_score[-1]),
           "val_ap=", "{:.5f}".format(ap_curr),
+          "feat_roc=", "{:.5f}".format(roc_feat),
+          "feat_ap=", "{:.5f}".format(ap_feat),
           "time=", "{:.5f}".format(time.time() - t))
 
     if epoch % 50 == 0:
