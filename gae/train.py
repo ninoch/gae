@@ -29,9 +29,10 @@ flags.DEFINE_integer('hidden2', 16, 'Number of units in hidden layer 2.')
 flags.DEFINE_float('weight_decay', 0., 'Weight for L2 loss on embedding matrix.')
 flags.DEFINE_float('dropout', 0., 'Dropout rate (1 - keep probability).')
 
-flags.DEFINE_string('model', 'gcn_ae', 'Model string.')
+flags.DEFINE_string('model', 'gcn_vae', 'Model string.')
 flags.DEFINE_string('dataset', 'cora', 'Dataset string.')
 flags.DEFINE_integer('features', 1, 'Whether to use features (1) or not (0).')
+flags.DEFINE_string("checkpoint_dir", "checkpoints", "checkpoint directory")
 
 model_str = FLAGS.model
 dataset_str = FLAGS.dataset
@@ -93,9 +94,25 @@ with tf.name_scope('optimizer'):
                            pos_weight=pos_weight,
                            norm=norm)
 
+
+
+def load_checkpoints(sess):
+  saver = tf.train.Saver()
+  checkpoint = tf.train.get_checkpoint_state(FLAGS.checkpoint_dir)
+  if checkpoint and checkpoint.model_checkpoint_path:
+    saver.restore(sess, checkpoint.model_checkpoint_path)
+    print("loaded checkpoint: {0}".format(checkpoint.model_checkpoint_path))
+  else:
+    print("Could not find old checkpoint")
+    if not os.path.exists(FLAGS.checkpoint_dir):
+      os.mkdir(FLAGS.checkpoint_dir)
+  return saver
+
 # Initialize session
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
+
+saver = load_checkpoints(sess)
 
 cost_val = []
 acc_val = []
@@ -159,6 +176,9 @@ for epoch in range(FLAGS.epochs):
           "train_acc=", "{:.5f}".format(avg_accuracy), "val_roc=", "{:.5f}".format(val_roc_score[-1]),
           "val_ap=", "{:.5f}".format(ap_curr),
           "time=", "{:.5f}".format(time.time() - t))
+
+    if epoch % 50 == 0:
+      saver.save(sess, FLAGS.checkpoint_dir + '/' + 'checkpoint', global_step = epoch)
 
 print("Optimization Finished!")
 
